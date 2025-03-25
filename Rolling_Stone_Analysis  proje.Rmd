@@ -1,0 +1,593 @@
+
+---
+title: "Rolling Stone Dataset Analysis and Visualization"
+Name: Hasan ERTOKUS , Ahmet Ali Dal
+---
+
+# Rolling Stone Dataset Analysis
+
+This document explores the Rolling Stone dataset using R. The analysis involves data cleaning, transformation, and visualization with `ggplot2`.
+
+## Setting Up the Environment
+
+We first load the necessary libraries and the dataset.
+
+```{r setup}
+# Required libraries
+library(tidyverse)
+library(gmodels)
+
+# Load the dataset
+data <- read.csv("rolling_stone.csv")
+```
+
+## Data Exploration and Transformation
+
+### 1. Dataset Dimensions and Column Names
+
+Retrieve the dataset's dimensions and column names.
+
+```{r dataset-info}
+data_info <- list(
+  Dimensions = dim(data),
+  Column_Names = colnames(data)
+)
+print("Dataset dimensions and column names:")
+print(data_info)
+```
+
+### 2. Missing Data Analysis
+
+Analyze the missing data in the dataset.
+
+```{r missing-data}
+missing_data <- data %>% summarise_all(~sum(is.na(.)))
+print("Number of missing values:")
+print(missing_data)
+
+missing_data_percent <- data %>% summarise_all(~mean(is.na(.)) * 100)
+print("Percentage of missing values (%):")
+print(missing_data_percent)
+```
+
+### 3. Frequency Analysis of Categorical Variables
+
+Summarize the frequency of categorical variables.
+
+```{r categorical-summary}
+categorical_summary <- data %>% 
+  select(where(is.character)) %>% 
+  summarise(across(everything(), ~list(table(.))))
+print("Frequency analysis of categorical variables:")
+print(categorical_summary)
+```
+
+### 4. Summary Statistics for Numerical Variables
+
+Compute mean, median, and standard deviation for numerical variables.
+
+```{r numerical-summary}
+numerical_summary <- data %>% 
+  select(where(is.numeric)) %>% 
+  summarise_all(list(
+    mean = ~mean(., na.rm = TRUE),
+    median = ~median(., na.rm = TRUE),
+    sd = ~sd(., na.rm = TRUE)
+  ))
+print("Summary statistics for numerical variables:")
+print(numerical_summary)
+```
+
+### 5. Top 5 Observations with the Lowest Rank in 2003
+
+Identify the top 5 rows with the lowest rank in 2003.
+
+```{r top-5-rows}
+top_5_rows <- data %>% arrange(rank_2003) %>% head(5)
+print("Top 5 observations with the lowest rank in 2003:")
+print(top_5_rows)
+```
+
+### 6. Filter Data Based on Conditions
+
+Filter rows based on specific conditions.
+
+```{r filter-data}
+filtered_data <- data %>% filter(rank_2012 > 50 & ave_age_at_top_500 < 100)
+print("Data filtered based on specific conditions:")
+print(filtered_data)
+```
+
+### 7. Add a New Column
+
+Add a column calculating the rank difference between 2003 and 2020.
+
+```{r add-column}
+data <- data %>% mutate(rank_difference = rank_2003 - rank_2020)
+print("New column (rank_difference) added:")
+head(data)
+```
+
+### 8. Grouping and Averages
+
+Group data by genre and calculate average Spotify popularity.
+
+```{r grouping-averages}
+grouped_data <- data %>% 
+  group_by(genre) %>% 
+  summarize(avg_popularity = mean(spotify_popularity, na.rm = TRUE))
+print("Average Spotify popularity by genre:")
+print(grouped_data)
+```
+
+### 9. Pivoting the Dataset
+
+Transform the dataset from wide to long format.
+
+```{r pivot-data}
+long_data <- data %>% 
+  pivot_longer(
+    cols = c(rank_2003, rank_2012, rank_2020),
+    names_to = "year",
+    values_to = "rank"
+  )
+print("Pivoted dataset (long format):")
+head(long_data)
+```
+
+### 10. Cross-Tabulation
+
+Analyze the relationship between genre and artist gender.
+
+```{r cross-tabulation}
+cross_tab <- CrossTable(data$genre, data$artist_gender, prop.chisq = FALSE)
+print("Relationship between categorical variables (cross-tabulation):")
+print(cross_tab)
+```
+
+
+
+## Data Visualization
+
+### 1. Bar Chart: Distribution of Genres
+
+
+```{r bar-chart-genres}
+data %>%
+  count(genre) %>%
+  ggplot(aes(x = reorder(genre, -n), y = n, fill = genre)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Distribution of Genres", x = "Genre", y = "Count") +
+  theme_minimal()
+```
+
+
+
+1. Bar Chart: Distribution of Genres
+Analysis and Explanation:
+This bar chart illustrates the number of songs in each genre. Genres like Rock and Pop dominate the dataset, reflecting their cultural significance and mainstream appeal. Less-represented genres, such as Jazz or Folk, may indicate niche audiences or a bias in the dataset. The chart emphasizes the diversity of music while also showcasing genres with potential underrepresentation.
+
+
+
+
+
+
+### 2. Histogram: Distribution of Spotify Popularity
+
+
+```{r histogram-popularity}
+data %>%
+  ggplot(aes(x = spotify_popularity)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "black") +
+  labs(title = "Distribution of Spotify Popularity", x = "Popularity", y = "Count") +
+  theme_minimal()
+```
+
+
+2. Histogram: Distribution of Spotify Popularity
+Analysis and Explanation:
+The histogram shows the distribution of Spotify popularity scores. Most songs cluster around moderate popularity (40-60), suggesting that while a significant portion of the dataset enjoys widespread recognition, only a few achieve viral or extreme popularity. This pattern may highlight the competitive nature of streaming platforms or reflect broader audience preferences.
+
+
+
+
+
+
+### 3. Boxplot: Spotify Popularity by Genre
+
+
+```{r boxplot-popularity-genre}
+data %>%
+  ggplot(aes(x = genre, y = spotify_popularity, fill = genre)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(title = "Spotify Popularity by Genre", x = "Genre", y = "Popularity") +
+  theme_minimal()
+```
+
+
+3. Boxplot: Spotify Popularity by Genre
+Analysis and Explanation:
+The boxplot compares the spread of Spotify popularity across genres. Pop and Hip-Hop display high variability, with many outliers achieving exceptional popularity, highlighting these genres' ability to produce chart-topping hits. Conversely, Classical and Jazz exhibit lower variability, suggesting steady but niche popularity. The chart underscores how different genres resonate differently with audiences.
+
+
+
+
+
+
+
+# 4. Scatterplot: Rank 2003 vs. Rank 2020
+
+
+```{r}
+data %>%
+  ggplot(aes(x = rank_2003, y = rank_2020)) +
+  geom_point(alpha = 0.6, color = "blue") +
+  labs(title = "Rank 2003 vs. Rank 2020", x = "Rank 2003", y = "Rank 2020") +
+  theme_minimal()
+```
+
+
+
+
+4. Scatterplot: Rank 2003 vs. Rank 2020
+Analysis and Explanation:
+This scatterplot examines rank changes over time. Songs or artists near the diagonal line maintain consistent popularity, while those deviating significantly either improved or declined in rank. Notable upward trends may indicate enduring appeal, while downward trends could signal shifts in audience tastes or the influence of newer artists.
+
+
+
+
+
+
+
+# 5. Line plot: Average rank over years
+
+```{r}
+data_long <- data %>%
+  pivot_longer(cols = c(rank_2003, rank_2012, rank_2020), names_to = "year", values_to = "rank")
+
+data_long %>%
+  group_by(year) %>%
+  summarise(avg_rank = mean(rank, na.rm = TRUE)) %>%
+  ggplot(aes(x = year, y = avg_rank, group = 1)) +
+  geom_line(color = "red", size = 1.2) +
+  geom_point(size = 3) +
+  labs(title = "Average Rank Over Years", x = "Year", y = "Average Rank") +
+  theme_minimal()
+```
+
+5. Line Plot: Average Rank Over Years
+Analysis and Explanation:
+The line plot highlights trends in the average rank over 2003, 2012, and 2020. A general decline in average rank suggests improved rankings over time, potentially due to the inclusion of newer, more popular songs or changing ranking criteria. Peaks or dips may signify shifts in cultural trends or landmark music releases during specific periods.
+
+
+
+# 6. Heatmap: Relationship between genre and artist gender
+
+
+
+```{r}
+data %>%
+  count(genre, artist_gender) %>%
+  ggplot(aes(x = genre, y = artist_gender, fill = n)) +
+  geom_tile(color = "white") +
+  labs(title = "Genre vs. Artist Gender", x = "Genre", y = "Artist Gender", fill = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+6. Heatmap: Relationship Between Genre and Artist Gender
+Analysis and Explanation:
+The heatmap visualizes gender representation across genres. Male artists dominate certain genres, like Rock and Hip-Hop, while others, such as Pop or Country, may show more balanced representation. Highlighting these disparities provides valuable insights into gender inclusivity and diversity within the music industry.
+
+
+### 7. Density plot: Spotify popularity by genre
+.
+
+```{r density-plot-spotify-popularity}
+data %>%
+  ggplot(aes(x = spotify_popularity, fill = genre)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density of Spotify Popularity by Genre", x = "Popularity", y = "Density") +
+  theme_minimal()
+```
+
+7. Density Plot: Spotify Popularity by Genre
+Analysis and Explanation:
+The density plot reveals the distribution of popularity scores across genres. Mainstream genres like Pop and Hip-Hop skew towards higher popularity, while niche genres like Classical show a more even spread. This chart highlights the unique audience engagement patterns of different genres.
+
+
+
+### 8. Pie chart: Genre proportions
+
+
+```{r pie-chart-genre-proportions}
+data %>%
+  count(genre) %>%
+  ggplot(aes(x = "", y = n, fill = genre)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y") +
+  labs(title = "Genre Proportions") +
+  theme_void()
+```
+
+
+
+8. Pie Chart: Genre Proportions
+Analysis and Explanation:
+The pie chart illustrates the proportion of songs in each genre. Dominant slices, such as Rock or Pop, reflect their historical and cultural significance, while smaller slices represent niche genres. This visualization underscores the diversity within the dataset and offers insights into genre representation.
+
+
+
+
+
+
+
+### 9. Violin plot: Spotify popularity by artist gender
+
+
+```{r violin-plot-artist-gender}
+data %>%
+  ggplot(aes(x = artist_gender, y = spotify_popularity, fill = artist_gender)) +
+  geom_violin() +
+  labs(title = "Spotify Popularity by Artist Gender", x = "Artist Gender", y = "Popularity") +
+  theme_minimal()
+```
+
+9. Violin Plot: Spotify Popularity by Artist Gender
+Analysis and Explanation:
+The violin plot compares Spotify popularity distributions across genders. While all genders share some overlap, male and female artists might exhibit distinct trends, such as differing medians or variability. This plot provides insight into potential disparities in popularity metrics across genders.
+
+
+
+
+
+### 10. Bubble chart: Genre by average rank difference
+
+```{r bubble-chart-avg-rank-difference}
+data %>%
+  group_by(genre) %>%
+  summarise(avg_rank_diff = mean(rank_2003 - rank_2020, na.rm = TRUE),
+            count = n()) %>%
+  ggplot(aes(x = genre, y = avg_rank_diff, size = count, color = genre)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Genre by Average Rank Difference", x = "Genre", y = "Average Rank Difference", size = "Count") +
+  theme_minimal() +
+  coord_flip()
+```
+
+10. Bubble Chart: Genre by Average Rank Difference
+Analysis and Explanation:
+This bubble chart illustrates the relationship between genre and average rank change over time. Larger bubbles represent genres with more songs, while their positions reflect rank differences. Genres like Pop may show significant rank improvements, while others, like Classical, could reveal minimal change. This visualization highlights genre-level trends in rank mobility.
+
+
+
+
+
+
+
+
+
+
+
+
+### 11. Faceted scatterplot: Rank 2003 vs. Rank 2020 by genre
+
+
+
+```{r faceted-scatterplot-rank-genre}
+data %>%
+  ggplot(aes(x = rank_2003, y = rank_2020, color = genre)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~genre) +
+  labs(title = "Rank 2003 vs. Rank 2020 by Genre", x = "Rank 2003", y = "Rank 2020") +
+  theme_minimal()
+```
+
+11. Faceted Scatterplot: Rank 2003 vs. Rank 2020 by Genre
+Analysis and Explanation:
+This faceted scatterplot breaks down rank changes by genre. Each genre's unique distribution highlights trends within its ranks. For example, Pop might exhibit significant upward rank mobility, while Classical maintains consistent ranks. This chart provides a detailed genre-specific view of ranking trends.
+
+
+
+
+
+
+
+
+### 12. Bar chart: Top 10 most frequent artists
+
+
+
+```{r bar-chart-top-artists}
+data %>%
+  count(sort_name) %>%
+  top_n(10, n) %>%
+  ggplot(aes(x = reorder(sort_name, n), y = n, fill = sort_name)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Top 10 Most Frequent Artists", x = "Artist Name", y = "Count") +
+  theme_minimal()
+```
+
+12. Bar Chart: Top 10 Most Frequent Artists
+Analysis and Explanation:
+This bar chart showcases the most frequent artists in the dataset. These artists dominate the rankings, reflecting their cultural impact and longevity. Analyzing their prominence provides insights into the industry’s most influential contributors.
+
+
+
+
+
+
+
+### 13. Histogram: Distribution of rank differences
+
+```{r histogram-rank-difference}
+data %>%
+  mutate(rank_difference = rank_2003 - rank_2020) %>%
+  ggplot(aes(x = rank_difference)) +
+  geom_histogram(binwidth = 5, fill = "purple", color = "white") +
+  labs(title = "Distribution of Rank Differences", x = "Rank Difference", y = "Count") +
+  theme_minimal()
+```
+
+
+13. Histogram: Distribution of Rank Differences
+Analysis and Explanation:
+The histogram highlights the spread of rank differences from 2003 to 2020. Positive values suggest rising popularity, while negative values reflect a decline. The clustering of rank changes provides insights into how the music landscape has evolved over time.
+
+
+
+
+
+
+
+### 14. Heatmap: Rank differences by genre
+
+
+```{r heatmap-rank-difference-genre}
+data %>%
+  mutate(rank_difference = rank_2003 - rank_2020) %>%
+  group_by(genre) %>%
+  summarise(avg_diff = mean(rank_difference, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(genre, -avg_diff), y = avg_diff, fill = avg_diff)) +
+  geom_tile() +
+  labs(title = "Average Rank Difference by Genre", x = "Genre", y = "Average Difference", fill = "Difference") +
+  theme_minimal() +
+  coord_flip()  # Flips the plot to make genre names vertical
+
+```
+
+
+14. Heatmap: Rank Differences by Genre
+Analysis and Explanation:
+This heatmap visualizes the average rank differences across genres. Warmer colors indicate significant improvements, while cooler colors signify declines. For instance, Hip-Hop might show significant upward trends, while Classical remains stable, reflecting shifts in mainstream preferences.
+
+
+
+
+### 15. Scatterplot: Spotify popularity vs. artist age
+
+```{r scatterplot-spotify-popularity-artist-age}
+data %>%
+  ggplot(aes(x = ave_age_at_top_500, y = spotify_popularity)) +
+  geom_point(alpha = 0.6, color = "green") +
+  labs(title = "Spotify Popularity vs. Artist Age", x = "Average Age at Top 500", y = "Spotify Popularity") +
+  theme_minimal()
+```
+
+
+
+15. Scatterplot: Spotify Popularity vs. Artist Age
+Analysis and Explanation:
+This scatterplot explores the relationship between artist age and Spotify popularity. While younger artists may dominate higher popularity scores, older artists could reflect consistent fanbases. This plot highlights potential trends in age-based audience engagement.
+
+
+
+
+
+
+### 16. Line plot: Artist frequency over years
+
+
+```{r line-plot-artist-frequency}
+artist_year_data <- data %>%
+  pivot_longer(cols = c(rank_2003, rank_2012, rank_2020), names_to = "year", values_to = "rank")
+
+artist_year_data %>%
+  count(sort_name, year) %>%
+  ggplot(aes(x = year, y = n, group = sort_name, color = sort_name)) +
+  geom_line() +
+  labs(title = "Artist Frequency Over Years", x = "Year", y = "Frequency") +
+  theme_minimal()
+```
+
+
+16. Line Plot: Artist Frequency Over Years
+Analysis and Explanation:
+This line plot shows how frequently artists appeared in the dataset over different years. Consistent performers may reflect enduring popularity, while peaks or drops suggest changing relevance. This chart provides insight into artist longevity and trends.
+
+
+
+### 17. Bar chart: Distribution of artists by gender
+
+```{r bar-chart-artist-gender}
+data %>%
+  count(artist_gender) %>%
+  ggplot(aes(x = artist_gender, y = n, fill = artist_gender)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Distribution of Artists by Gender", x = "Gender", y = "Count") +
+  theme_minimal()
+```
+
+17. Bar Chart: Distribution of Artists by Gender
+Analysis and Explanation:
+This bar chart illustrates gender representation among artists. The visualization highlights disparities, with male artists potentially dominating the dataset. Such insights emphasize the need for greater inclusivity in the industry.
+
+
+
+
+
+### 18. Scatterplot: Rank difference vs. Spotify popularity
+
+```{r scatterplot-rank-difference-spotify-popularity}
+data %>%
+  mutate(rank_difference = rank_2003 - rank_2020) %>%
+  ggplot(aes(x = rank_difference, y = spotify_popularity, color = genre)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Rank Difference vs. Spotify Popularity", x = "Rank Difference", y = "Spotify Popularity") +
+  theme_minimal()
+```
+
+
+
+
+
+18. Scatterplot: Rank Difference vs. Spotify Popularity
+Analysis and Explanation:
+The scatterplot examines whether Spotify popularity correlates with rank changes. Positive relationships might suggest that popularity directly impacts rank improvements, while outliers could represent viral trends or cult classics.
+
+
+
+
+
+
+
+
+### 19. Density plot: Rank differences by artist gender
+
+
+```{r density-plot-rank-difference-gender}
+data %>%
+  mutate(rank_difference = rank_2003 - rank_2020) %>%
+  ggplot(aes(x = rank_difference, fill = artist_gender)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density of Rank Differences by Artist Gender", x = "Rank Difference", y = "Density") +
+  theme_minimal()
+```
+
+19. Density Plot: Rank Differences by Artist Gender
+Analysis and Explanation:
+The density plot reveals gender-based variations in rank differences. It identifies whether certain genders experience more rank mobility, with overlapping trends suggesting shared patterns of success or decline.
+
+
+
+
+### 20. Faceted bar chart: Spotify popularity distribution by genre
+
+```{r faceted-bar-chart-spotify-popularity}
+data %>%
+  ggplot(aes(x = spotify_popularity, fill = genre)) +
+  geom_histogram(binwidth = 5, color = "white", alpha = 0.7) +
+  facet_wrap(~genre) +
+  labs(title = "Spotify Popularity Distribution by Genre", x = "Spotify Popularity", y = "Count") +
+  theme_minimal()
+```
+
+
+20. Faceted Bar Chart: Spotify Popularity Distribution by Genre
+Analysis and Explanation:
+This faceted chart highlights Spotify popularity distributions within each genre. It reveals genre-specific trends, such as Pop skewing towards higher popularity, while Jazz might exhibit a more balanced spread. This visualization helps understand genre-based audience engagement.
